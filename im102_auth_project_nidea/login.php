@@ -15,7 +15,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     } else {
 
         // Check user with the given email only
-        $stmt = $conn->prepare("SELECT id, username, password_hash FROM users WHERE email = ?");
+        $stmt = $conn->prepare("SELECT id, username, password_hash, role FROM users WHERE email = ?");
         $stmt->bind_param("s", $email);
         $stmt->execute();
         $result = $stmt->get_result();
@@ -31,8 +31,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                 $_SESSION['user_id'] = $user['id'];
                 $_SESSION['username'] = $user['username'];
+                $_SESSION['role'] = $user['role'];
 
-                header("Location: dashboard.php");
+                if ($_SESSION['role'] === 'admin') {
+                    header("Location: admin_dashboard.php");
+                } else {
+                    header("Location: dashboard.php");
+                }
+
                 exit();
             }
         }

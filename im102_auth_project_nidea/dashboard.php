@@ -1,11 +1,7 @@
 <?php
-session_start();
+require_once 'auth_functions.php';
 
-// Redirect if user is not logged in
-if (!isset($_SESSION['user_id'])) {
-    header("Location: login.php");
-    exit();
-}
+requireLogin();
 
 $username = htmlspecialchars($_SESSION['username'], ENT_QUOTES, 'UTF-8');
 ?>
@@ -21,6 +17,12 @@ $username = htmlspecialchars($_SESSION['username'], ENT_QUOTES, 'UTF-8');
 <div class="container">
     <h2>Welcome, <?php echo $username; ?>!</h2>
     <p>This is your dashboard. Only logged-in users can access this page.</p>
+
+    <!-- Role-Based Navigation -->
+    <?php if ($_SESSION['role'] === 'admin'): ?>
+        <p><a href="admin_dashboard.php">Go to Admin Panel</a></p>
+    <?php endif; ?>
+
     <p><a href="logout.php">Logout</a></p>
 </div>
 
