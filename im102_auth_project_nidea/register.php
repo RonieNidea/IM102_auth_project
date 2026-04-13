@@ -1,32 +1,23 @@
 <?php
+session_start();
 require_once 'db_connect.php';
+require_once 'validate.php';
 
 $errors = [];
 $success = "";
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
-    // Retrieve data
-    $username = trim($_POST['username'] ?? '');
-    $email = trim($_POST['email'] ?? '');
-    $password = $_POST['password'] ?? '';
-    $confirm_password = $_POST['confirm_password'] ?? '';
+    // Use validation function
+    $errors = validateRegistration($_POST);
 
-    // Validate input
-    if (empty($username) || empty($email) || empty($password) || empty($confirm_password)) {
-        $errors[] = "All fields are required.";
-    }
-
-    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $errors[] = "Invalid email format.";
-    }
-
-    if ($password !== $confirm_password) {
-        $errors[] = "Passwords do not match.";
-    }
-
-    // Check for existing user (Prepared Statement)
     if (empty($errors)) {
+
+        $username = trim($_POST['username']);
+        $email = trim($_POST['email']);
+        $password = $_POST['password'];
+
+        // Check if user already exists
         $stmt = $conn->prepare("SELECT id FROM users WHERE username = ? OR email = ?");
         $stmt->bind_param("ss", $username, $email);
         $stmt->execute();
@@ -39,20 +30,23 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $stmt->close();
     }
 
-    // Insert user if no errors
     if (empty($errors)) {
+        try {
+            $password_hash = password_hash($password, PASSWORD_DEFAULT);
 
-        // Hash password
-        $password_hash = password_hash($password, PASSWORD_DEFAULT);
+            $stmt = $conn->prepare("INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)");
+            $stmt->bind_param("sss", $username, $email, $password_hash);
 
-        $stmt = $conn->prepare("INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)");
-        $stmt->bind_param("sss", $username, $email, $password_hash);
+            if (!$stmt->execute()) {
+                throw new Exception($stmt->error);
+            }
 
-        if ($stmt->execute()) {
             $success = "Registration successful!";
-            header("Location: login.php"); // Redirect to login page after successful registration
-            exit(); // Stop further code execution
-        } else {
+            header("Location: login.php");
+            exit();
+
+        } catch (Exception $e) {
+            logError($e->getMessage());
             $errors[] = "Something went wrong. Please try again.";
         }
 
@@ -72,19 +66,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 <div class="container">
     <h2>Register</h2>
 
-    <?php
-    if (!empty($errors)) {
-        echo "<ul style='color:red;'>";
-        foreach ($errors as $error) {
-            echo "<li>$error</li>";
-        }
-        echo "</ul>";
-    }
+    <?php if (!empty($errors)): ?>
+        <ul style="color:red;">
+            <?php foreach ($errors as $error): ?>
+                <li><?php echo htmlspecialchars($error); ?></li>
+            <?php endforeach; ?>
+        </ul>
+    <?php endif; ?>
 
-    if (!empty($success)) {
-        echo "<p style='color:green;'>$success</p>";
-    }
-    ?>
+    <?php if (!empty($success)): ?>
+        <p style="color:green;"><?php echo htmlspecialchars($success); ?></p>
+    <?php endif; ?>
 
     <form method="post" action="register.php">
         <label>Username:</label><br>

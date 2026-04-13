@@ -14,22 +14,28 @@ requireAdmin();
 <body>
 
 <div class="container">
+
 <h1>Admin Dashboard</h1>
 
-<p>Welcome Admin, <?php echo htmlspecialchars($_SESSION['username']); ?>!</p>
+<p>Welcome Admin, <?php echo htmlspecialchars($_SESSION['username'], ENT_QUOTES, 'UTF-8'); ?>!</p>
 
 <h3>Admin Controls</h3>
 
 <ul>
-<li><a href="#">Manage Users</a></li>
-<li><a href="#">System Settings</a></li>
-<li><a href="#">View Reports</a></li>
+    <li><a href="admin_users.php">Manage Users</a></li>
+    <li><a href="create_post.php">Create Post</a></li>
+    <li><a href="posts.php">View All Posts</a></li>
 </ul>
 
 <hr>
 
-<a href="dashboard.php">User Dashboard</a> |
-<a href="logout.php">Logout</a>
+<h3>Navigation</h3>
+
+<ul>
+    <li><a href="dashboard.php">User Dashboard</a></li>
+    <li><a href="editor_dashboard.php">Editor Dashboard</a></li>
+    <li><a href="logout.php">Logout</a></li>
+</ul>
 
 </div>
 

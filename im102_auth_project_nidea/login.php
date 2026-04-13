@@ -1,50 +1,58 @@
 <?php
 session_start();
 require_once 'db_connect.php';
+require_once 'validate.php';
 
 $errors = [];
-$generic_error = "Invalid credentials.";  // Generic error message
+$generic_error = "Invalid credentials.";
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
-    $email = trim($_POST['email'] ?? '');  // Only using email
-    $password = $_POST['password'] ?? '';
+    // Use validation function
+    $errors = validateLogin($_POST);
 
-    if (empty($email) || empty($password)) {
-        $errors[] = $generic_error;
-    } else {
+    if (empty($errors)) {
 
-        // Check user with the given email only
-        $stmt = $conn->prepare("SELECT id, username, password_hash, role FROM users WHERE email = ?");
-        $stmt->bind_param("s", $email);
-        $stmt->execute();
-        $result = $stmt->get_result();
+        $email = trim($_POST['email']);
+        $password = $_POST['password'];
 
-        if ($result->num_rows === 1) {
+        try {
+            $stmt = $conn->prepare("SELECT id, username, password_hash, role FROM users WHERE email = ?");
+            $stmt->bind_param("s", $email);
+            $stmt->execute();
+            $result = $stmt->get_result();
 
-            $user = $result->fetch_assoc();
+            if ($result->num_rows === 1) {
 
-            if (password_verify($password, $user['password_hash'])) {
+                $user = $result->fetch_assoc();
 
-                // Prevent session fixation attack
-                session_regenerate_id(true);
+                if (password_verify($password, $user['password_hash'])) {
 
-                $_SESSION['user_id'] = $user['id'];
-                $_SESSION['username'] = $user['username'];
-                $_SESSION['role'] = $user['role'];
+                    session_regenerate_id(true);
 
-                if ($_SESSION['role'] === 'admin') {
-                    header("Location: admin_dashboard.php");
-                } else {
-                    header("Location: dashboard.php");
+                    $_SESSION['user_id'] = $user['id'];
+                    $_SESSION['username'] = $user['username'];
+                    $_SESSION['role'] = $user['role'];
+
+                    if ($user['role'] === 'admin') {
+                        header("Location: admin_dashboard.php");
+                    } elseif ($user['role'] === 'editor') {
+                        header("Location: editor_dashboard.php");
+                    } else {
+                        header("Location: dashboard.php");
+                    }
+
+                    exit();
                 }
-
-                exit();
             }
-        }
 
-        // Always return generic error
-        $errors[] = $generic_error;  // Show "Invalid credentials" message
+            // Always generic error
+            $errors[] = $generic_error;
+
+        } catch (Exception $e) {
+            logError($e->getMessage());
+            $errors[] = "Something went wrong. Please try again.";
+        }
 
         $stmt->close();
     }
@@ -62,11 +70,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 <div class="container">
     <h2>Login</h2>
 
-    <?php
-    if (!empty($errors)) {
-        echo "<p style='color:red;'>$errors[0]</p>";  // Display the generic error message
-    }
-    ?>
+    <?php if (!empty($errors)): ?>
+        <p style="color:red;"><?php echo htmlspecialchars($errors[0]); ?></p>
+    <?php endif; ?>
 
     <form method="post" action="login.php">
         <label>Email:</label><br>
